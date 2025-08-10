@@ -6,6 +6,7 @@ export const SiteConfig = {
   subtitle: "성격 유형에 따라 나에게 맞는 직무와 자격증을 추천해줘요!",
   copyright: "© 2025 Certi. All rights reserved.",
   googleAnalyticsId: "",
+  description: "",
   author: {
     name: "Minju Choi",
     photo: "/images/favicon.png",

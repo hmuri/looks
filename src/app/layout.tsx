@@ -46,6 +46,11 @@ export const metadata: Metadata = {
       follow: true,
     },
   },
+  appleWebApp: {
+    capable: true, // ★ iOS standalone
+    statusBarStyle: "black-translucent", // or "default" | "black"
+    title: SiteConfig.title,
+  },
   openGraph: {
     images: [
       {
