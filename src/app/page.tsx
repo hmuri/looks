@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import ToggleGlow from "@/components/ToggleGlow";
 import VerticalSliderGlow from "@/components/VerticalSliderGlow";
 import { useState } from "react";
+import GlowSpinRing from "@/components/GlowSpinRing";
 
 export default function Home() {
   const [lamp1, setLamp1] = useState(false);
@@ -79,22 +80,34 @@ export default function Home() {
           <div>
             <div className="text-[#E9E9E9] text-[16px] text-[16px] w-[200px] p-5 flex flex-col items-center h-[525px] rounded-[10px] bg-gradient-to-b from-[#29557B] via-[#3B8161]  via-[#557189] to-[#698195] ">
               <div className=" text-center mt-4">기기 1</div>
-              <img
-                src="/image/infinite.svg"
-                alt="infinite"
-                className="flex justify-center mt-3"
-              />
+              <div
+                className="relative mt-3 grid place-items-center"
+                style={{ width: 94, height: 94 }}
+              >
+                <GlowSpinRing active={lamp5} />
+                <img
+                  src="/image/infinite.svg"
+                  alt="infinite"
+                  className="w-[82px] h-[82px] relative z-10 select-none"
+                />
+              </div>
               <ToggleGlow
                 checked={lamp5}
                 onChange={setLamp5}
                 className="select-none pt-3"
               />
               <div className=" text-center mt-15">기기 2</div>
-              <img
-                src="/image/infinite.svg"
-                alt="infinite"
-                className="flex justify-center mt-3"
-              />
+              <div
+                className="relative mt-3 grid place-items-center"
+                style={{ width: 94, height: 94 }}
+              >
+                <GlowSpinRing active={lamp6} />
+                <img
+                  src="/image/infinite.svg"
+                  alt="infinite"
+                  className="w-[82px] h-[82px] relative z-10 select-none"
+                />
+              </div>
               <ToggleGlow
                 checked={lamp6}
                 onChange={setLamp6}
