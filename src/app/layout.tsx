@@ -65,7 +65,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body className="min-h-screen bg-gradient-to-b from-[#215078] via-[#395873]  via-[#425C73] to-[#51687C] flex items-center">
+        {children}
+      </body>
     </html>
   );
 }
