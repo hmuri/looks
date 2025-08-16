@@ -1,5 +1,4 @@
-// app/live/page.tsx (또는 원하는 경로)
-// 유튜브 스튜디오 느낌의 라이브 프리뷰 (웹캠 사용, 송출 X)
+// app/live/page.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -26,6 +25,11 @@ export default function LiveStudioMock() {
   const [viewers, setViewers] = useState(28619);
   const [error, setError] = useState<string | null>(null);
 
+  // 녹화 관련 상태
+  const [recorder, setRecorder] = useState<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const [recording, setRecording] = useState(false);
+
   // 타이머 & 가짜 시청자 수 변화
   useEffect(() => {
     let t: any, v: any;
@@ -41,6 +45,72 @@ export default function LiveStudioMock() {
     };
   }, [isLive]);
 
+  const pickSupportedMimeType = () => {
+    const candidates = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+      // 사파리 최신 일부: "video/mp4;codecs=h264,aac" 지원 가능하나 호환 이슈가 많아 기본 비활성
+    ];
+    for (const type of candidates) {
+      if (MediaRecorder.isTypeSupported(type)) return type;
+    }
+    return ""; // 브라우저가 정하도록
+  };
+
+  const startRecording = () => {
+    if (!stream) return;
+    try {
+      const mimeType = pickSupportedMimeType();
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      chunksRef.current = [];
+      mr.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      mr.onstop = () => {
+        const usedType = mr.mimeType || mimeType || "video/webm";
+        const ext = usedType.includes("mp4") ? "mp4" : "webm";
+        const ts = new Date();
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const name =
+          `live-` +
+          `${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}-` +
+          `${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(
+            ts.getSeconds()
+          )}.${ext}`;
+
+        const blob = new Blob(chunksRef.current, { type: usedType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+        setRecording(false);
+      };
+      // timeslice를 주면 ondataavailable이 주기적으로 호출되어 메모리 압력이 덜함
+      mr.start(1000);
+      setRecorder(mr);
+      setRecording(true);
+    } catch (e: any) {
+      setError(e?.message ?? "녹화를 시작할 수 없습니다.");
+    }
+  };
+
+  const stopRecording = () => {
+    try {
+      if (recorder && recorder.state !== "inactive") {
+        recorder.stop();
+      }
+    } catch {
+      // ignore
+    } finally {
+      setRecorder(null);
+    }
+  };
+
   const startCamera = async () => {
     try {
       setError(null);
@@ -50,12 +120,15 @@ export default function LiveStudioMock() {
           height: { ideal: 720 },
           facingMode: "user",
         },
-        audio: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       });
       setStream(s);
       if (videoRef.current) {
         videoRef.current.srcObject = s;
-        // iOS/Safari: playsInline+muted로 자동재생 허용
         await videoRef.current.play().catch(() => {});
       }
       setCamOn(true);
@@ -93,6 +166,7 @@ export default function LiveStudioMock() {
   const endLive = () => {
     setIsLive(false);
     setSeconds(320);
+    if (recording) stopRecording();
   };
 
   const fmt = (n: number) => new Date(n * 1000).toISOString().substring(11, 19); // 00:00:00
@@ -109,8 +183,14 @@ export default function LiveStudioMock() {
             <Users className="w-4 h-4" />
             <span>{viewers.toLocaleString()}</span>
           </div>
-          <div className="px-2 py-1 rounded bg-red-600/80 text-xs font-semibold">
-            LIVE {isLive ? fmt(seconds) : "대기"}
+          <div
+            className={[
+              "px-2 py-1 rounded text-xs font-semibold",
+              recording ? "bg-red-600/80" : "bg-white/10",
+            ].join(" ")}
+            title={recording ? "녹화 중" : "대기"}
+          >
+            {recording ? "REC" : "LIVE"} {isLive ? fmt(seconds) : "대기"}
           </div>
         </div>
       </header>
@@ -205,7 +285,11 @@ export default function LiveStudioMock() {
             <div className="ml-auto flex items-center gap-2">
               {!isLive ? (
                 <button
-                  onClick={() => setIsLive(true)}
+                  onClick={() => {
+                    setIsLive(true);
+                    // 방송 시작 시 녹화도 함께 시작
+                    if (!recording) startRecording();
+                  }}
                   disabled={!stream}
                   className="px-4 py-2 rounded bg-red-600 hover:bg-red-500 disabled:opacity-40 font-semibold"
                 >
@@ -221,8 +305,8 @@ export default function LiveStudioMock() {
               )}
               <button
                 onClick={() => {
-                  endLive();
-                  stopCamera();
+                  endLive(); // 녹화 종료 & 타이머 리셋
+                  stopCamera(); // 카메라/마이크 정지
                 }}
                 className="px-3 py-2 rounded bg-white/10 hover:bg-white/15"
                 title="스트림 종료"
@@ -242,7 +326,6 @@ export default function LiveStudioMock() {
             </div>
           </div>
 
-          {/* 리스트만 임베드 */}
           <LiveCommentFeed burstChance={0.15} stallChance={0.08} loop />
 
           <div className="h-14 px-3 py-2 border-t border-white/10 flex items-center gap-2">
