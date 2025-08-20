@@ -40,7 +40,7 @@ export default function Home() {
           className="select-none"
         />
         <ToggleGlow
-          label="조명 3 on/off"
+          label="마이크 on/off"
           checked={lamp4}
           onChange={setLamp4}
           className="select-none"
